@@ -6,11 +6,9 @@ import (
 	"time"
 )
 
-const (
-	WORKERS int = 3
-)
+const WORKERS int = 5
 
-func crunchNumber(queue chan int, quit chan bool, id int, wg *sync.WaitGroup, workerWg *sync.WaitGroup) {
+func crunchNumber(queue chan int, quit <-chan bool, id int, wg *sync.WaitGroup, workerWg *sync.WaitGroup) {
 	defer workerWg.Done()
 	for {
 		select {
@@ -31,7 +29,7 @@ func crunchNumber(queue chan int, quit chan bool, id int, wg *sync.WaitGroup, wo
 			time.Sleep(50 * time.Millisecond)
 			wg.Done()
 		case <-quit:
-			fmt.Printf("QUITTING\n")
+			fmt.Println("QUITTING")
 			return
 		}
 	}
@@ -44,17 +42,19 @@ func main() {
 	var workerWg sync.WaitGroup
 
 	wg.Add(1)
-	queue <- 8
+	queue <- 10
 
 	workerWg.Add(WORKERS)
 	for i := 0; i < WORKERS; i++ {
 		go crunchNumber(queue, quit, i, &wg, &workerWg)
 	}
+
 	fmt.Printf("waiting for queue...\n")
 	wg.Wait()
 	fmt.Printf("queue done!!\n")
-	// close(quit)
-	quit <- true
+	for i := 0; i < WORKERS; i++ {
+		quit <- true
+	}
 	fmt.Printf("waiting for crunchers...\n")
 	workerWg.Wait()
 	fmt.Printf("crunchers done!!\n")
